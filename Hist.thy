@@ -114,7 +114,6 @@ lemma produce_multi_incr_hist_op_strict_monotone:
 lemma produce_multi_incr_hist_op_productive:
   "productive stream_in \<Longrightarrow>
    monotone stream_in WM \<Longrightarrow>
-   (\<forall>x\<in>set buf1. \<forall>wm\<in>WM. \<not> fst x \<le> wm) \<Longrightarrow>
    produce (multi_incr_hist_op buf1 buf2) stream_in = stream_out \<Longrightarrow>
    productive stream_out"
   unfolding multi_incr_hist_op_def produce_compose_op_correctness
@@ -125,12 +124,6 @@ code_lazy_type llist
 declare produce_inner.simps[code]
 
 value "ltaken_Data 10 (produce (multi_incr_hist_op [] []) (LCons (Data 3 2) (LCons (Data 1 2) (LCons (Watermark 3) LNil))::((nat, nat) event) llist))"
-
-term multi_incr_hist_op
-
-term get_Data
-
-find_consts "'a set \<Rightarrow> 'a" name: Max
 
 primcorec hist_logic where
   "hist_logic H buf = Logic (\<lambda> ev.

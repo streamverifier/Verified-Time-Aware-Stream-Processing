@@ -4004,7 +4004,6 @@ lemma produce_compose_op_sync_op_incr_op_productive:
 lemma produce_multi_incr_op_productive:
   "monotone stream_in WM \<Longrightarrow>
    productive stream_in \<Longrightarrow>
-   (\<forall>x\<in>set buf1. \<forall>wm\<in>WM. \<not> fst x \<le> wm) \<Longrightarrow>
    produce (multi_incr_op buf1 buf2) stream_in = stream_out \<Longrightarrow>
    productive stream_out"
   unfolding multi_incr_op_def produce_compose_op_correctness
