@@ -10,7 +10,6 @@ definition "multi_incr_hist_op buf1 buf2 =
 lemma multi_incr_hist_op_soundness:
   "Data t hist \<in> lset (produce (multi_incr_hist_op [] []) lxs) \<Longrightarrow>
    monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
    hist = multi_incr_coll_mset lxs t"
   unfolding multi_incr_hist_op_def produce_compose_op_correctness produce_map_op_correctness llist.set_map 
   apply (auto simp add: image_iff split: event.splits)
@@ -106,12 +105,11 @@ lemma multi_incr_hist_op_completeness_3:
 
 lemma produce_multi_incr_hist_op_strict_monotone:
   "monotone stream_in WM \<Longrightarrow>
-   productive stream_in \<Longrightarrow>
    (\<forall>x\<in>set buf1. \<forall>wm\<in>WM. \<not> fst x \<le> wm) \<Longrightarrow>
    produce (multi_incr_hist_op buf1 buf2) stream_in = stream_out \<Longrightarrow>
    monotone stream_out WM"
   unfolding multi_incr_hist_op_def
-  by (metis produce_compose_op_correctness produce_map_op_strict_monotone produce_multi_incr_op_strict_monotone)
+  by (metis (no_types, lifting) multi_incr_op_def produce_compose_op_correctness produce_compose_op_sync_op_incr_op_strict_monotone produce_map_op_strict_monotone)
 
 lemma produce_multi_incr_hist_op_productive:
   "productive stream_in \<Longrightarrow>

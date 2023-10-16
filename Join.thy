@@ -338,7 +338,6 @@ lemma lset_lconcat:
 lemma join_op_soundness:          
   "Data t tuple \<in> lset (produce (join_op [] [] {} join) lxs) \<Longrightarrow>
    monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
    \<exists> d1 d2 . d1 \<in> set (data_list_at lxs (Inl t)) \<and> d2 \<in> set (data_list_at lxs (Inr t)) \<and>
    join d1 d2 = Some tuple"
   unfolding join_op_def produce_compose_op_correctness produce_map_op_correctness llist.set_map produce_flatten_op_correctness
@@ -380,14 +379,14 @@ lemma join_op_soundness:
                 apply (rule exI[of _ d1])
                 apply (rule conjI)
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
                      apply simp
                     subgoal for n
                       apply hypsubst_thin
-                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm =t3 and batch=dd3 and n=n and buf="[]"] apply simp
+                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm=t3 and batch=dd3 and n=n and buf="[]"] apply simp
                       apply (drule meta_mp)
                        apply (metis fst_conv image_eqI ltaken_Data_produce_sync_op_in_batch_LE)
                       apply (drule meta_mp)
@@ -397,7 +396,17 @@ lemma join_op_soundness:
                       apply (rule image_eqI[where b=d1 and f="\<lambda>x. the (get_Data x)" and x="Data (Inl t') d1"])
                        apply auto
                       apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inl t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inl wm) \<in> lset lxs \<and> wm \<ge> t'")
+                         apply (smt (verit, ccfv_SIG) Inl_leq dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolE lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(1))
+                          done
+                        subgoal
+                          apply (metis (no_types, lifting) equals0D in_ltaken_Data_in_lxs list.set(1))
+                          done
+                        done
                       apply simp
                       using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
                       done
@@ -405,7 +414,7 @@ lemma join_op_soundness:
                   done
                 apply (rule exI[of _ d2])
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
@@ -421,16 +430,35 @@ lemma join_op_soundness:
                       apply auto
                       apply (rule image_eqI[where b=d2 and f="\<lambda>x. the (get_Data x)" and x="Data (Inr t') d2"])
                        apply auto
-                      apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
-                      apply simp
-                      using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
+                        apply (subst set_list_of)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inr t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inr wm) \<in> lset lxs \<and> wm \<ge> t'")
+                          apply (smt (verit, ccfv_SIG) dual_order.refl event.distinct(1) event.inject(1) event.split_sel fst_conv le_boolD lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (cases "t2")
+                           apply (metis Inr_Inl_False fst_conv less_eq_sum.simps)
+                          subgoal for x
+                            apply (rule exI[of _ x])
+                            apply simp
+                            subgoal premises prems
+                              using prems(5,9,10) apply -
+                              apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(2))
+                              done
+                            done
+                          done
+                        apply simp
+                        using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        subgoal
+                          using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        done
                       done
+                    using prems2(11) apply blast
                     done
-                  using prems2(12) apply simp
                   done
                 done
-              done
             subgoal for t'
               apply hypsubst_thin
               apply (subgoal_tac "concat (map snd (ltaken_Data m (produce (sync_op []) lxs))) \<noteq> []")
@@ -449,14 +477,14 @@ lemma join_op_soundness:
                 apply (rule exI[of _ d1])
                 apply (rule conjI)
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
                      apply simp
                     subgoal for n
                       apply hypsubst_thin
-                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm =t3 and batch=dd3 and n=n and buf="[]"] apply simp
+                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm=t3 and batch=dd3 and n=n and buf="[]"] apply simp
                       apply (drule meta_mp)
                        apply (metis fst_conv image_eqI ltaken_Data_produce_sync_op_in_batch_LE)
                       apply (drule meta_mp)
@@ -466,7 +494,17 @@ lemma join_op_soundness:
                       apply (rule image_eqI[where b=d1 and f="\<lambda>x. the (get_Data x)" and x="Data (Inl t') d1"])
                        apply auto
                       apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inl t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inl wm) \<in> lset lxs \<and> wm \<ge> t'")
+                         apply (smt (verit, ccfv_SIG) Inl_leq dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolE lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(1))
+                          done
+                        subgoal
+                          apply (metis (no_types, lifting) equals0D in_ltaken_Data_in_lxs list.set(1))
+                          done
+                        done
                       apply simp
                       using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
                       done
@@ -474,7 +512,7 @@ lemma join_op_soundness:
                   done
                 apply (rule exI[of _ d2])
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
@@ -490,25 +528,44 @@ lemma join_op_soundness:
                       apply auto
                       apply (rule image_eqI[where b=d2 and f="\<lambda>x. the (get_Data x)" and x="Data (Inr t') d2"])
                        apply auto
-                      apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
-                      apply simp
-                      using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
+                        apply (subst set_list_of)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inr t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inr wm) \<in> lset lxs \<and> wm \<ge> t'")
+                          apply (smt (verit, ccfv_SIG) dual_order.refl event.distinct(1) event.inject(1) event.split_sel fst_conv le_boolD lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (cases "t2")
+                           apply (metis Inr_Inl_False fst_conv less_eq_sum.simps)
+                          subgoal for x
+                            apply (rule exI[of _ x])
+                            apply simp
+                            subgoal premises prems
+                              using prems(5,9,10) apply -
+                              apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(2))
+                              done
+                            done
+                          done
+                        apply simp
+                        using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        subgoal
+                          using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        done
                       done
+                    using prems2(11) apply blast
                     done
-                  using prems2(12) apply simp
                   done
                 done
               done
             done
           done
-        done
       subgoal for wm
         apply simp
         done
       done
     done
- subgoal 
+  subgoal 
     apply (subst (asm) lset_lconcat)
     apply auto
     subgoal for x
@@ -544,14 +601,14 @@ lemma join_op_soundness:
                 apply (rule exI[of _ d1])
                 apply (rule conjI)
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
                      apply simp
                     subgoal for n
                       apply hypsubst_thin
-                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm =t3 and batch=dd3 and n=n and buf="[]"] apply simp
+                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm=t3 and batch=dd3 and n=n and buf="[]"] apply simp
                       apply (drule meta_mp)
                        apply (metis fst_conv image_eqI ltaken_Data_produce_sync_op_in_batch_LE)
                       apply (drule meta_mp)
@@ -561,7 +618,17 @@ lemma join_op_soundness:
                       apply (rule image_eqI[where b=d1 and f="\<lambda>x. the (get_Data x)" and x="Data (Inl t') d1"])
                        apply auto
                       apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inl t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inl wm) \<in> lset lxs \<and> wm \<ge> t'")
+                         apply (smt (verit, ccfv_SIG) Inl_leq dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolE lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(1))
+                          done
+                        subgoal
+                          apply (metis (no_types, lifting) equals0D in_ltaken_Data_in_lxs list.set(1))
+                          done
+                        done
                       apply simp
                       using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
                       done
@@ -569,7 +636,7 @@ lemma join_op_soundness:
                   done
                 apply (rule exI[of _ d2])
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
@@ -585,16 +652,35 @@ lemma join_op_soundness:
                       apply auto
                       apply (rule image_eqI[where b=d2 and f="\<lambda>x. the (get_Data x)" and x="Data (Inr t') d2"])
                        apply auto
-                      apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
-                      apply simp
-                      using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
+                        apply (subst set_list_of)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inr t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inr wm) \<in> lset lxs \<and> wm \<ge> t'")
+                          apply (smt (verit, ccfv_SIG) dual_order.refl event.distinct(1) event.inject(1) event.split_sel fst_conv le_boolD lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (cases "t2")
+                           apply (metis Inr_Inl_False fst_conv less_eq_sum.simps)
+                          subgoal for x
+                            apply (rule exI[of _ x])
+                            apply simp
+                            subgoal premises prems
+                              using prems(5,9,10) apply -
+                              apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(2))
+                              done
+                            done
+                          done
+                        apply simp
+                        using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        subgoal
+                          using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        done
                       done
+                    using prems2(11) apply blast
                     done
-                  using prems2(12) apply simp
                   done
                 done
-              done
             subgoal for t'
               apply hypsubst_thin
               apply (subgoal_tac "concat (map snd (ltaken_Data m (produce (sync_op []) lxs))) \<noteq> []")
@@ -613,14 +699,14 @@ lemma join_op_soundness:
                 apply (rule exI[of _ d1])
                 apply (rule conjI)
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
                      apply simp
                     subgoal for n
                       apply hypsubst_thin
-                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm =t3 and batch=dd3 and n=n and buf="[]"] apply simp
+                      using ltaken_Data_produce_soundness[where lxs=lxs and WM=WM and t="Inl t'" and t'="Inl t'" and wm=t3 and batch=dd3 and n=n and buf="[]"] apply simp
                       apply (drule meta_mp)
                        apply (metis fst_conv image_eqI ltaken_Data_produce_sync_op_in_batch_LE)
                       apply (drule meta_mp)
@@ -630,7 +716,17 @@ lemma join_op_soundness:
                       apply (rule image_eqI[where b=d1 and f="\<lambda>x. the (get_Data x)" and x="Data (Inl t') d1"])
                        apply auto
                       apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inl t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inl wm) \<in> lset lxs \<and> wm \<ge> t'")
+                         apply (smt (verit, ccfv_SIG) Inl_leq dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolE lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(1))
+                          done
+                        subgoal
+                          apply (metis (no_types, lifting) equals0D in_ltaken_Data_in_lxs list.set(1))
+                          done
+                        done
                       apply simp
                       using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
                       done
@@ -638,7 +734,7 @@ lemma join_op_soundness:
                   done
                 apply (rule exI[of _ d2])
                 subgoal premises prems2
-                  using prems2(1,2,8,9,10,11) apply -
+                  using prems2(1,7,8,9,10) apply -
                   apply auto
                   subgoal for t1 dd1 t2 dd2 t3 dd3
                     apply (cases m)
@@ -654,26 +750,45 @@ lemma join_op_soundness:
                       apply auto
                       apply (rule image_eqI[where b=d2 and f="\<lambda>x. the (get_Data x)" and x="Data (Inr t') d2"])
                        apply auto
-                      apply (subst set_list_of)
-                       apply (smt (verit) dual_order.refl event.distinct(1) event.sel(1) event.split_sel le_boolD lfilter_cong nless_le strict_monotone_productive_lfinite_lfilter_eq_t)
-                      apply simp
-                      using in_ltaken_Data_in_lxs apply (metis empty_iff list.set(1))
+                        apply (subst set_list_of)
+                      subgoal
+                        apply (cases "\<exists> d . Data (Inr t') d  \<in> lset lxs")
+                        subgoal
+                          apply (subgoal_tac "\<exists> wm . Watermark (Inr wm) \<in> lset lxs \<and> wm \<ge> t'")
+                          apply (smt (verit, ccfv_SIG) dual_order.refl event.distinct(1) event.inject(1) event.split_sel fst_conv le_boolD lfilter_cong nless_le strict_monotone_lfinite_lfilter_eq_t_alt)
+                          apply (cases "t2")
+                           apply (metis Inr_Inl_False fst_conv less_eq_sum.simps)
+                          subgoal for x
+                            apply (rule exI[of _ x])
+                            apply simp
+                            subgoal premises prems
+                              using prems(5,9,10) apply -
+                              apply (metis Inr_Inl_False fst_conv less_eq_sum.simps sum.inject(2))
+                              done
+                            done
+                          done
+                        apply simp
+                        using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        subgoal
+                          using in_ltaken_Data_in_lxs apply fastforce
+                          done
+                        done
                       done
+                    using prems2(11) apply blast
                     done
-                  using prems2(12) apply simp
                   done
                 done
               done
             done
           done
-        done
       subgoal for wm
         apply simp
         done
       done
     done
   done
-
+  
 lemma prefix_production_LE_lt_le:
   "prefix_production_LE op lxs m1 n1 \<Longrightarrow>
    prefix_production_LE op lxs m2 n2 \<Longrightarrow>

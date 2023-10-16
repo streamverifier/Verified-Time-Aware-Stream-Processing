@@ -1037,13 +1037,13 @@ lemma coll_diff_head:
 
 lemma coll_eq_coll_ltl:
   "monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
+   \<exists> wm . Watermark wm \<in> lset lxs \<and> t \<le> wm \<Longrightarrow> 
    coll (LCons (Data t d) lxs) t = add_mset d (coll lxs t)"
   apply (simp add: coll_def)
   apply (cases "lfinite lxs")
    apply (simp add: map_filter_simps(1))
   apply (subst list_of_LCons_conv)
-  apply (simp add: map_filter_simps strict_monotone_productive_lfinite_lfilter_eq_t)
+  apply (auto simp add: map_filter_simps strict_monotone_lfinite_lfilter_eq_t_alt)
   done
 
 lemma coll_eq_coll_ltl_Watermark[simp]:
@@ -1054,25 +1054,34 @@ lemma coll_eq_coll_ltl_Watermark[simp]:
 lemma sum_coll_ltl:
   "finite A \<Longrightarrow>
    t \<in> A \<Longrightarrow>
+   \<exists>wm. Watermark wm \<in> lset lxs \<and> t \<le> wm \<Longrightarrow>
    monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
    sum (coll (LCons (Data t d) lxs)) A = sum (coll lxs) A + {#d#}"
-  apply (induct A arbitrary: lxs rule: finite.induct)
+  apply (induct A arbitrary: t d lxs rule: finite.induct)
    apply fastforce
-  subgoal for A a ws
+  subgoal for A a t d lxs
     apply (cases "a \<in> A")
      apply (simp add: insert_absorb)
     apply (subst (1 2) comm_monoid_add_class.sum.insert)
       apply assumption+
-    apply (smt (verit, best) add.commute add_mset_add_single coll_diff_head coll_eq_coll_ltl insertE lhd'_simps(2) ltl_simps(2) sum.cong union_mset_add_mset_right)
+    apply (cases "a = t")
+    subgoal
+      apply hypsubst_thin
+      apply (subst coll_eq_coll_ltl)
+        apply assumption
+       apply simp
+      apply (smt (verit, best) add_mset_add_single coll_diff_head lhd'_simps(2) ltl_simps(2) sum_change_fun union_mset_add_mset_left)
+      done
+    apply simp  
+    apply (simp add: coll_diff_head)
     done
   done
+
 
 lemma sum_coll_ltl_not_in:
   "finite A \<Longrightarrow>
    t \<notin> A \<Longrightarrow>
    monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
    sum (coll (LCons (Data t d) lxs)) A = sum (coll lxs) A"
   apply (induct A arbitrary: lxs rule: finite.induct)
    apply fastforce
@@ -1088,18 +1097,16 @@ lemma sum_coll_ltl_not_in:
 lemma not_in_ts_coll_empty:
   "finite (ts lxs wm) \<Longrightarrow>
    monotone lxs WM \<Longrightarrow>
-   productive lxs \<Longrightarrow>
    t \<notin> ts lxs wm \<Longrightarrow>
    t \<le> wm \<Longrightarrow>
    \<exists>wm'\<ge>wm. Watermark wm' \<in> lset lxs \<Longrightarrow>
    coll lxs t = {#}"
   apply (subgoal_tac "lfinite (lfilter (\<lambda>x. case x of Data t' d \<Rightarrow> t' = t | Watermark wm \<Rightarrow> False) lxs)")
    defer
-  using strict_monotone_productive_lfinite_lfilter_eq_t apply blast
-  unfolding coll_def list_of_def
+  using strict_monotone_lfinite_lfilter_eq_t_alt apply fastforce
   apply simp
-  apply (smt (verit, best) diverge_lfilter_LNil event.split_sel le_boolE list_of_LNil list_of_def map_filter_simps(2) mem_Collect_eq min_def ts_def)
-  done
+  unfolding coll_def
+  apply (smt (verit, ccfv_threshold) diverge_lfilter_LNil dual_order.refl event.split_sel le_boolE list_of_LNil map_filter_simps(2) mem_Collect_eq mset_zero_iff nless_le ts_def)  done
 
 lemma ts_all_not_le:
   "monotone (LCons (Watermark wm) lxs) WM \<Longrightarrow>
@@ -1620,101 +1627,5 @@ lemma img_tmp_Lambda_Data:
   apply (induct A rule: finite_induct)
   apply auto
   done
-
-find_theorems lfilter  lfinite
-
-(*
-- Completeness (DONE)
-- Clean up proofs (use unused_thms ) (DONE)
-- productive and monotone of multi_incr_op and multi_incr_hist_op (DONE)
-- replace ts by ts' (DONE)
-- Modify op to always output a list (DONE)
-- End-of-stream op component (In progress)
-- remove productive assumption from soundness and monotone proofs 
-- Multiple inputs
-  -- time-aware join (window join)
-     -- use building blocks
-  -- correctness proofs
-- Applications/more examples - Use partial order
-- Write optmized hist_op in total order that is equal to the total order instance of multi_incr_hist_op
-- Cycles
-- synced_coll_op as flat_map
-- Re-write proofs in isar
-*)
-
-(*
-  Paper Schedule:
-  Draft Section 2: 15/09
-  Revision Section 3: 15/09
-  Draft Section 4: 22/09
-  Revision Section 2: ?
-  Draft Section 5: 02/10
-  Revision Section 4: ?
-  Draft Section 1 and 6: 06/10
-  Revision Section 5: ?
-  Revision Section 1 and 6: ?
-
-  Isabelle Schedule:
-  -- Multiple inputs
-
-*)
-
-(*
- Contributions:
-- Verified time-aware stream processing
-- Formally verified Time aware lazy list processing
-  -- monotone
-  -- productive
-  -- Partially ordered timestmaps
-- Multiple inputs
-- Building blocks
-- reasoning by coinduction to prove equivalence of logics
-  -- example: optmized hist_op in total order that is equal to the total order instance of multi_incr_hist_op
-- Stateful operators
-- Mixed co-recursion and monadic recursion 
-- Proof methodology (skip_n generalization, coinduction generalization)
-- Examples: partial ordered incremental computation, so on
-
-
-Sections:
-1. Introduction
-   -- Contributions
-2. Related work
-   -- Stream processing (frameworks): Flink, Timely...
-   -- https://link.springer.com/chapter/10.1007/978-3-030-44914-8_15
-   -- Modeling stream processing
-      -- Stream processors in Isabelle (Representation of stream processors using nested fixed points)
-   -- Careful study for formalization of stream processing
-      -- Map reduce verified in proof assistant (iris)
-      -- Tiny formalization of stream processors
-3. Preliminaries:
-    Codatypes (lazy lists), coinductive command (lprefix), co-recursive (lappend), lshift (friend), partial_function (lfilter) and ccpo llist.
-4. Lazy Lists processors:
-   -- op co-datatype
-      -- link with stream processing operators
-   -- produce_inner (ccpo)
-   -- produce (corec)
-   -- compose_op + correctness (motivate skip_n_productions)
-   -- skip_n_productions (correctness)
-5. Time-Aware Operators
-   -- strict monotone
-   -- productive 
-      -- first coinductive one
-      -- second present the ltl
-   -- show preservation of productive and strict monotone for compose_op and skip_n_productions_op
-   -- sync_op and coll_synced_op
-   -- correctness
-      - soundness
-      - monotone
-      - productive 
-      - completeness
-   -- compositional reasoning
-      -- multi_incremental
-6. Case study
-    -- Histograms
-      -- optimized for linear order (and equality)
-    -- Binary operator
-
-*)
 
 end
