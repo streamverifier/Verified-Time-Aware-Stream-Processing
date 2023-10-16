@@ -3973,7 +3973,6 @@ lemma produce_compose_op_sync_op_incr_op_strict_monotone:
 
 lemma produce_multi_incr_op_strict_monotone:
   "monotone stream_in WM \<Longrightarrow>
-   productive stream_in \<Longrightarrow>
    (\<forall>x\<in>set buf1. \<forall>wm\<in>WM. \<not> fst x \<le> wm) \<Longrightarrow>
    produce (multi_incr_op buf1 buf2) stream_in = stream_out \<Longrightarrow>
    monotone stream_out WM"
@@ -4186,10 +4185,6 @@ primcorec filter_op where
                                 Watermark wm \<Rightarrow> (filter_op P, [Watermark wm])
                               | Data t d \<Rightarrow> (filter_op P, if P t d then [Data t d] else []))"
 
-subsection \<open>Correctness\<close> 
-lemma produce_filter_op_correctness:
-  "produce (filter_op P) = lfilter (\<lambda> ev . case ev of Watermark wm \<Rightarrow> True | Data t d \<Rightarrow> P t d)"
-  oops
 
 (* FIXME: delete this*)
 section \<open>flat_map_op\<close> 
@@ -4379,28 +4374,6 @@ lemma produce_inner_Some_constant_op:
    apply (auto split: list.splits prod.splits list.splits)
   apply (metis fst_conv)
   done
-
-lemma produce_inner_skip_n_productions_op_Some_llength_False:
-  "produce_inner (skip_n_productions_op op n, lxs) = Some (op', x, xs, lxs') \<Longrightarrow>
-   \<forall>ev. fst (apply op ev) = op \<Longrightarrow>
-   llength (lconcat (lmap (\<lambda>ev. (snd (apply op ev))) lxs)) \<le> enat n \<Longrightarrow> False"
-    apply (induct "(skip_n_productions_op op n, lxs)" "(op', x, xs, lxs')" arbitrary: lxs op x xs lxs' op' n rule: produce_inner_alt[consumes 1])
-  subgoal 
-   apply (auto split: list.splits prod.splits list.splits if_splits)
-    subgoal 
-      apply (drule meta_spec)+
-      apply (drule meta_mp)
-       apply (rule refl)
-      apply (drule meta_mp)
-      apply blast
-      apply (drule meta_mp)
-      oops
-(* 
-lemma llength_lconcat_gt_n_apply_op_not_Nil:
-  "llength (lconcat (lmap (\<lambda>ev. llist_of (snd (apply op ev))) lxs)) > enat n \<Longrightarrow>
-   \<exists> ev \<in> lset lxs . (snd (apply op ev)) \<noteq> []"
-  by (metis (no_types, lifting) lconcat_lmap_LNil llength_LNil llist_of.simps(1) not_less_zero)
- *)
 
 lemma flatten_op_Nil[simp]:
   "snd (apply flatten_op (Data t [])) = []"
@@ -4816,16 +4789,6 @@ lemma produce_inner_union_op_singleton:
   apply (induct op_lxs "(lgc', x, xs, lzs)" arbitrary: W lxs lgc' rule: produce_inner_alt[consumes 1])
    apply (auto split: event.splits if_splits sum.splits)
   done
-
-lemma produce_inner_union_op_later:
-  "produce_inner op_lxs = Some (lgc', x::('t::order, 'b) event, xs, lzs) \<Longrightarrow>
-   op_lxs = (union_op W, lxs) \<Longrightarrow>
-   Data t d \<in> lset (produce lgc' lzs) \<Longrightarrow>
-   Data (Inl t) d \<in> lset lxs \<or> Data (Inr t) d \<in> lset lxs"
-  apply (subst (asm) produce.code)
-  apply (simp split: option.splits prod.splits; hypsubst_thin)
-  oops
-
 
 lemma skip_n_productions_op_union_op_Data_soundness:
   "produce (skip_n_productions_op (union_op W) n) lxs = LCons (Data t d) lzs \<Longrightarrow> 
